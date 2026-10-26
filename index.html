@@ -19,12 +19,22 @@
 
   /* Indice dei generi */
   nav { display:flex; flex-wrap:wrap; gap:8px; padding:8px 6vw 8px; }
-  nav a { padding:7px 14px; border:1px solid var(--line); border-radius:999px;
-    color:var(--fg); text-decoration:none; font-size:13px; }
-  nav a:hover { background:var(--fg); color:var(--bg); }
+  nav button { padding:7px 14px; border:1px solid var(--line); border-radius:999px;
+    background:transparent; color:var(--fg); font:inherit; font-size:13px; cursor:pointer; }
+  nav button:hover, nav button.active { background:var(--fg); color:var(--bg); }
+
+  /* Con un solo genere selezionato: griglia a capo invece dello scorrimento orizzontale */
+  main.single .gallery { flex-wrap:wrap; overflow-x:visible; }
+  main.single .arrow { display:none !important; }
+
+  /* Vista "Tutti": un'unica griglia con tutti gli album, senza titoli di genere */
+  main.all { display:flex; flex-wrap:wrap; gap:20px; padding:24px 6vw 0; }
+  main.all .genre, main.all .wrap, main.all .gallery { display:contents; }
+  main.all .genre h2, main.all .arrow { display:none; }
 
   /* Sezione genere */
   .genre { margin-top:36px; }
+  .genre[hidden] { display:none; }
   .genre h2 { margin:0; padding:0 6vw; font-size:clamp(20px,3vw,28px); letter-spacing:-0.02em;
     display:flex; align-items:baseline; gap:10px; }
   .genre h2 span { font-size:13px; color:var(--muted); font-weight:400; letter-spacing:0; }
@@ -78,6 +88,7 @@ const GENRES = [
     name: "Synthpop",
     albums: [
       "https://open.spotify.com/intl-it/album/2Htq1sHgmdGffojIBM6Q1s",
+      
 
       // "https://music.apple.com/it/album/nome-album/1234567890",
     ],
@@ -204,12 +215,26 @@ const slug = s => "g-" + s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036
 const main = document.getElementById("genres");
 const nav = document.getElementById("nav");
 
+function selectGenre(id) {
+  main.classList.toggle("single", id !== "all");
+  main.classList.toggle("all", id === "all");
+  nav.querySelectorAll("button").forEach(b => b.classList.toggle("active", b.dataset.id === id));
+  main.querySelectorAll(".genre").forEach(sec => { sec.hidden = id !== "all" && sec.id !== id; });
+  try { history.replaceState(null, "", id === "all" ? location.pathname : "#" + id); } catch (e) {}
+}
+
+const allChip = document.createElement("button");
+allChip.type = "button"; allChip.dataset.id = "all"; allChip.textContent = "Tutti";
+allChip.onclick = () => selectGenre("all");
+nav.append(allChip);
+
 GENRES.filter(g => g.albums && g.albums.length).forEach(g => {
   const id = slug(g.name);
 
   // Voce nell’indice
-  const chip = document.createElement("a");
-  chip.href = "#" + id; chip.textContent = g.name;
+  const chip = document.createElement("button");
+  chip.type = "button"; chip.dataset.id = id; chip.textContent = g.name;
+  chip.onclick = () => selectGenre(id);
   nav.append(chip);
 
   // Sezione
@@ -239,6 +264,9 @@ GENRES.filter(g => g.albums && g.albums.length).forEach(g => {
 
   main.append(sec);
 });
+
+// Stato iniziale: se l'URL contiene #genere lo apro, altrimenti mostro tutti
+selectGenre(document.getElementById(location.hash.slice(1)) && location.hash.length > 1 ? location.hash.slice(1) : "all");
 </script>
 </body>
 </html>
