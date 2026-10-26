@@ -18,10 +18,27 @@
   header p { margin:0; color:var(--muted); max-width:52ch; line-height:1.5; }
 
   /* Indice dei generi */
-  nav { display:flex; flex-wrap:wrap; gap:8px; padding:8px 6vw 8px; }
-  nav button { padding:7px 14px; border:1px solid var(--line); border-radius:999px;
-    background:transparent; color:var(--fg); font:inherit; font-size:13px; cursor:pointer; }
-  nav button:hover, nav button.active { background:var(--fg); color:var(--bg); }
+  nav { position:sticky; top:0; z-index:5; background:var(--bg); display:flex; align-items:center; gap:14px; padding:10px 6vw; }
+  .current { font-size:15px; font-weight:600; }
+  /* Menu laterale */
+  .burger { width:44px; height:44px; padding:0; border:1px solid var(--line); border-radius:50%; background:var(--bg);
+    cursor:pointer; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:5px; }
+  .burger span { display:block; width:18px; height:2px; border-radius:2px; background:var(--fg); }
+  .scrim { position:fixed; inset:0; background:rgba(0,0,0,.45); opacity:0; pointer-events:none; transition:opacity .25s; z-index:9; }
+  #drawer { position:fixed; top:0; left:0; bottom:0; width:min(82vw,300px); z-index:10; display:flex; flex-direction:column;
+    background:var(--bg); border-right:1px solid var(--line); transform:translateX(-100%); visibility:hidden;
+    transition:transform .25s ease, visibility 0s .25s; }
+  body.menu-open { overflow:hidden; }
+  body.menu-open #drawer { transform:none; visibility:visible; transition:transform .25s ease; }
+  body.menu-open .scrim { opacity:1; pointer-events:auto; }
+  .drawer-head { display:flex; align-items:center; justify-content:space-between; padding:18px 20px 10px; font-weight:600; font-size:18px; }
+  .drawer-head button { width:40px; height:40px; border:0; background:none; color:var(--fg); font-size:28px; line-height:1; cursor:pointer; }
+  #drawer ul { list-style:none; margin:0; padding:0 0 max(16px,env(safe-area-inset-bottom)); overflow-y:auto; flex:1; }
+  #drawer li button { width:100%; min-height:48px; padding:12px 20px; border:0; background:none; color:var(--fg); font:inherit; font-size:16px;
+    display:flex; justify-content:space-between; align-items:center; gap:12px; text-align:left; cursor:pointer; }
+  #drawer li button small { color:var(--muted); font-size:13px; }
+  #drawer li button:hover, #drawer li button.active { background:var(--fg); color:var(--bg); }
+  #drawer li button.active small, #drawer li button:hover small { color:inherit; opacity:.7; }
 
   /* Con un solo genere selezionato: griglia a capo invece dello scorrimento orizzontale */
   main.single .gallery { flex-wrap:wrap; overflow-x:visible; }
@@ -88,7 +105,6 @@ const GENRES = [
     name: "Synthpop",
     albums: [
       "https://open.spotify.com/intl-it/album/2Htq1sHgmdGffojIBM6Q1s",
-      
 
       // "https://music.apple.com/it/album/nome-album/1234567890",
     ],
@@ -218,24 +234,52 @@ const nav = document.getElementById("nav");
 function selectGenre(id) {
   main.classList.toggle("single", id !== "all");
   main.classList.toggle("all", id === "all");
-  nav.querySelectorAll("button").forEach(b => b.classList.toggle("active", b.dataset.id === id));
+  list.querySelectorAll("button").forEach(b => b.classList.toggle("active", b.dataset.id === id));
+  const act = list.querySelector('button[data-id="' + id + '"]');
+  if (act) currentEl.textContent = act.firstChild.textContent;
   main.querySelectorAll(".genre").forEach(sec => { sec.hidden = id !== "all" && sec.id !== id; });
   try { history.replaceState(null, "", id === "all" ? location.pathname : "#" + id); } catch (e) {}
 }
 
-const allChip = document.createElement("button");
-allChip.type = "button"; allChip.dataset.id = "all"; allChip.textContent = "Tutti";
-allChip.onclick = () => selectGenre("all");
-nav.append(allChip);
+// Menu laterale a scomparsa
+nav.innerHTML = '<button class="burger" aria-label="Apri menu generi" aria-expanded="false" aria-controls="drawer"><span></span><span></span><span></span></button><span class="current">Tutti i generi</span>';
+const burger = nav.querySelector(".burger"), currentEl = nav.querySelector(".current");
+const drawer = document.createElement("aside");
+drawer.id = "drawer"; drawer.setAttribute("aria-label", "Generi");
+drawer.innerHTML = '<div class="drawer-head"><span>Generi</span><button type="button" aria-label="Chiudi menu">×</button></div><ul></ul>';
+const scrim = document.createElement("div");
+scrim.className = "scrim";
+document.body.append(drawer, scrim);
+const list = drawer.querySelector("ul");
+
+function setMenu(open) {
+  document.body.classList.toggle("menu-open", open);
+  burger.setAttribute("aria-expanded", open);
+  drawer.inert = !open;
+}
+setMenu(false);
+burger.onclick = () => setMenu(true);
+scrim.onclick = () => setMenu(false);
+drawer.querySelector(".drawer-head button").onclick = () => setMenu(false);
+document.addEventListener("keydown", e => { if (e.key === "Escape") setMenu(false); });
+
+function addItem(id, label, count) {
+  const li = document.createElement("li");
+  const b = document.createElement("button");
+  b.type = "button"; b.dataset.id = id;
+  b.innerHTML = "<span></span><small></small>";
+  b.firstChild.textContent = label;
+  b.lastChild.textContent = count;
+  b.onclick = () => { selectGenre(id); setMenu(false); window.scrollTo(0, 0); };
+  li.append(b); list.append(li);
+}
+addItem("all", "Tutti i generi", "");
 
 GENRES.filter(g => g.albums && g.albums.length).forEach(g => {
   const id = slug(g.name);
 
-  // Voce nell’indice
-  const chip = document.createElement("button");
-  chip.type = "button"; chip.dataset.id = id; chip.textContent = g.name;
-  chip.onclick = () => selectGenre(id);
-  nav.append(chip);
+  // Voce nel menu laterale
+  addItem(id, g.name, g.albums.length);
 
   // Sezione
   const sec = document.createElement("section");
