@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>I miei album preferiti</title>
+<style>
+  :root { --bg:#f6f4ef; --fg:#1a1a1a; --muted:#6b6b66; --line:#dcd8cf; }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg:#121212; --fg:#f1efe9; --muted:#9a9890; --line:#2e2e2b; }
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body { margin:0; background:var(--bg); color:var(--fg); min-height:100vh;
+    font-family:"Helvetica Neue",Helvetica,Arial,sans-serif; padding-bottom:48px; }
+  header { padding:48px 6vw 16px; }
+  h1 { margin:0 0 8px; font-size:clamp(28px,5vw,52px); letter-spacing:-0.03em; }
+  header p { margin:0; color:var(--muted); max-width:52ch; line-height:1.5; }
+
+  /* Indice dei generi */
+  nav { display:flex; flex-wrap:wrap; gap:8px; padding:8px 6vw 8px; }
+  nav a { padding:7px 14px; border:1px solid var(--line); border-radius:999px;
+    color:var(--fg); text-decoration:none; font-size:13px; }
+  nav a:hover { background:var(--fg); color:var(--bg); }
+
+  /* Sezione genere */
+  .genre { margin-top:36px; }
+  .genre h2 { margin:0; padding:0 6vw; font-size:clamp(20px,3vw,28px); letter-spacing:-0.02em;
+    display:flex; align-items:baseline; gap:10px; }
+  .genre h2 span { font-size:13px; color:var(--muted); font-weight:400; letter-spacing:0; }
+
+  .wrap { position:relative; }
+  .gallery { display:flex; gap:20px; overflow-x:auto; scroll-snap-type:x proximity;
+    padding:16px 6vw 20px; scroll-behavior:smooth; scrollbar-width:thin; }
+  .album { flex:0 0 auto; width:clamp(150px,20vw,220px); scroll-snap-align:start; }
+  .album a { color:inherit; text-decoration:none; display:block; }
+  .cover { width:100%; aspect-ratio:1; object-fit:cover; display:block; border-radius:6px;
+    background:var(--line); box-shadow:0 8px 24px rgba(0,0,0,.18); transition:transform .2s; }
+  .album a:hover .cover { transform:translateY(-4px); }
+  .title { margin:12px 0 2px; font-weight:600; font-size:15px; line-height:1.3;
+    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
+  .artist { margin:0; color:var(--muted); font-size:13px; }
+  .skeleton .cover { animation:pulse 1.2s ease-in-out infinite; box-shadow:none; }
+  .error .cover { display:flex; align-items:center; justify-content:center; padding:12px;
+    font-size:12px; color:var(--muted); text-align:center; }
+  @keyframes pulse { 50% { opacity:.45; } }
+
+  .arrow { position:absolute; top:calc(50% - 30px); width:44px; height:44px; border-radius:50%;
+    border:1px solid var(--line); background:var(--bg); color:var(--fg); cursor:pointer;
+    font-size:20px; display:none; align-items:center; justify-content:center; z-index:2; }
+  .arrow.left { left:12px; } .arrow.right { right:12px; }
+  @media (hover:hover) and (min-width:700px) { .arrow { display:flex; } }
+</style>
+</head>
+<body>
+
+<header>
+  <h1>I miei album</h1>
+  <p>Le mie reference e i dischi che ascolto di più, divisi per genere.</p>
+  <p>-----</p>
+</header>
+
+<nav id="nav"></nav>
+<main id="genres"></main>
+
+<script>
+/* ==========================================================
+   ✏️  QUI METTI I TUOI ALBUM, DIVISI PER GENERE
+   - Ogni genere ha un nome e una lista di link (Spotify o Apple Music).
+   - Per aggiungere un genere, copia un blocco { name: ..., albums: [...] }.
+   - L’ordine dei generi e degli album è quello che scrivi qui.
+
+   Se l’artista o il titolo non vengono trovati bene, puoi forzarli:
+   { url: "https://...", artist: "Nome Artista", title: "Titolo" }
+   ========================================================== */
+const GENRES = [
+  {
+    name: "Synthpop",
+    albums: [
+      "https://open.spotify.com/intl-it/album/2Htq1sHgmdGffojIBM6Q1s",
+
+      // "https://music.apple.com/it/album/nome-album/1234567890",
+    ],
+  },
+  {
+    name: "Pop",
+    albums: [
+      
+      "https://open.spotify.com/intl-it/album/3WZZF72ihlKPZBS4zSsNHl?si=k25SE_42SDmd4I1pS2l5Hg",
+      "https://open.spotify.com/intl-it/album/2PullXMROSpzCdFdzEmFhy?si=6wySdAGiTs2syWMR36o8uQ"
+      // "https://music.apple.com/it/album/nome-album/1234567890",
+    ],
+  },
+  {
+    name: "Rock",
+    albums: [
+      
+      "https://open.spotify.com/intl-it/album/7wOOA7l306K8HfBKfPoafr?si=EXClBelARWGqEl7Dbw_Meg"
+      // "https://music.apple.com/it/album/nome-album/1234567890",
+    ],
+  },
+ 
+  {
+    name: "Hip-hop",
+    albums: [
+      
+      "https://open.spotify.com/intl-it/album/7ycBtnsMtyVbbwTfJwRjSP?si=ninuFAmZQZek94Ty9-Pd1g"
+      // "https://music.apple.com/it/album/nome-album/1234567890",
+    ],
+  },
+  {
+    name: "Punk",
+    albums: [
+      
+      "https://open.spotify.com/intl-it/album/3UoOO8m0oxxvUHXUKf3qcZ?si=Q6cy00V8S6eN3r5wJxaMjg"
+      // "https://music.apple.com/it/album/nome-album/1234567890",
+    ],
+  },
+  // {
+  //   name: "Hip hop",
+  //   albums: [
+  //     "https://open.spotify.com/album/XXXXXXXX",
+  //     { url: "https://open.spotify.com/album/YYYYYYYY", artist: "Artista" },
+  //   ],
+  // },
+];
+/* ========================================================== */
+
+
+const CACHE_KEY = "album-cache-v1";
+let cache = {};
+try { cache = JSON.parse(localStorage.getItem(CACHE_KEY)) || {}; } catch (e) {}
+const saveCache = () => { try { localStorage.setItem(CACHE_KEY, JSON.stringify(cache)); } catch (e) {} };
+
+async function fromSpotify(url) {
+  const m = url.match(/open\.spotify\.com\/(?:[a-z-]+\/)?(album|track)\/([A-Za-z0-9]+)/);
+  if (!m) throw new Error("link Spotify non valido");
+  const clean = "https://open.spotify.com/" + m[1] + "/" + m[2];
+  const r = await fetch("https://open.spotify.com/oembed?url=" + encodeURIComponent(clean));
+  if (!r.ok) throw new Error("Spotify non risponde");
+  const d = await r.json();
+  let artist = "";
+  // L’oEmbed di Spotify non include l’artista: lo cerco su iTunes in base al titolo
+  try {
+    const s = await fetch("https://itunes.apple.com/search?entity=album&limit=5&term=" + encodeURIComponent(d.title));
+    const results = (await s.json()).results || [];
+    const hit = results.find(x => x.collectionName.toLowerCase().startsWith(d.title.toLowerCase())) || results[0];
+    if (hit) artist = hit.artistName;
+  } catch (e) {}
+  return { title: d.title, artist, cover: d.thumbnail_url, url: clean };
+}
+
+async function fromApple(url) {
+  const u = new URL(url);
+  const id = u.searchParams.get("i") || u.pathname.split("/").filter(Boolean).pop();
+  if (!/^\d+$/.test(id)) throw new Error("link Apple Music non valido");
+  const country = (u.pathname.split("/")[1] || "it").slice(0, 2);
+  const r = await fetch("https://itunes.apple.com/lookup?id=" + id + "&country=" + country);
+  const x = ((await r.json()).results || [])[0];
+  if (!x) throw new Error("album non trovato");
+  return {
+    title: x.collectionName || x.trackName,
+    artist: x.artistName,
+    cover: (x.artworkUrl100 || "").replace(/\d+x\d+bb/, "600x600bb"),
+    url
+  };
+}
+
+async function resolve(url) {
+  if (cache[url]) return cache[url];
+  let a;
+  if (/open\.spotify\.com/.test(url)) a = await fromSpotify(url);
+  else if (/music\.apple\.com/.test(url)) a = await fromApple(url);
+  else throw new Error("link non riconosciuto");
+  cache[url] = a; saveCache();
+  return a;
+}
+
+function makeCard() {
+  const el = document.createElement("div");
+  el.className = "album skeleton";
+  el.innerHTML = '<a target="_blank" rel="noopener"><img class="cover" alt=""><p class="title">&nbsp;</p><p class="artist">&nbsp;</p></a>';
+  return el;
+}
+
+function fill(el, a) {
+  el.className = "album";
+  el.querySelector("a").href = a.url;
+  const img = el.querySelector("img");
+  img.src = a.cover; img.alt = "Copertina di " + a.title;
+  el.querySelector(".title").textContent = a.title;
+  el.querySelector(".artist").textContent = a.artist || "";
+}
+
+function fail(el, url, err) {
+  el.className = "album error";
+  el.innerHTML = '<a href="' + url + '" target="_blank" rel="noopener"><div class="cover">Impossibile caricare<br>questo link</div>' +
+    '<p class="title">' + url.replace(/^https?:\/\//, "").slice(0, 40) + '…</p></a>';
+  console.warn("Album non risolto:", url, err);
+}
+
+const slug = s => "g-" + s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-");
+
+const main = document.getElementById("genres");
+const nav = document.getElementById("nav");
+
+GENRES.filter(g => g.albums && g.albums.length).forEach(g => {
+  const id = slug(g.name);
+
+  // Voce nell’indice
+  const chip = document.createElement("a");
+  chip.href = "#" + id; chip.textContent = g.name;
+  nav.append(chip);
+
+  // Sezione
+  const sec = document.createElement("section");
+  sec.className = "genre"; sec.id = id;
+  sec.innerHTML = '<h2></h2><div class="wrap"><button class="arrow left" aria-label="Indietro">‹</button>' +
+    '<div class="gallery"></div><button class="arrow right" aria-label="Avanti">›</button></div>';
+  const h2 = sec.querySelector("h2");
+  h2.textContent = g.name;
+  const count = document.createElement("span");
+  count.textContent = g.albums.length + (g.albums.length === 1 ? " album" : " album");
+  h2.append(count);
+
+  const gallery = sec.querySelector(".gallery");
+  const step = () => gallery.clientWidth * 0.8;
+  sec.querySelector(".left").onclick = () => gallery.scrollBy({ left: -step() });
+  sec.querySelector(".right").onclick = () => gallery.scrollBy({ left: step() });
+
+  g.albums.forEach(item => {
+    const o = typeof item === "string" ? { url: item } : item;
+    const el = makeCard();
+    gallery.append(el);
+    resolve(o.url.trim())
+      .then(a => fill(el, { ...a, title: o.title || a.title, artist: o.artist || a.artist }))
+      .catch(e => fail(el, o.url, e));
+  });
+
+  main.append(sec);
+});
+</script>
+</body>
+</html>
