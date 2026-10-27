@@ -91,67 +91,7 @@
 <main id="genres"></main>
 
 <script>
-/* ==========================================================
-   ✏️  QUI METTI I TUOI ALBUM, DIVISI PER GENERE
-   - Ogni genere ha un nome e una lista di link (Spotify o Apple Music).
-   - Per aggiungere un genere, copia un blocco { name: ..., albums: [...] }.
-   - L’ordine dei generi e degli album è quello che scrivi qui.
-
-   Se l’artista o il titolo non vengono trovati bene, puoi forzarli:
-   { url: "https://...", artist: "Nome Artista", title: "Titolo" }
-   ========================================================== */
-const GENRES = [
-  {
-    name: "Synthpop",
-    albums: [
-      "https://open.spotify.com/intl-it/album/2Htq1sHgmdGffojIBM6Q1s",
-
-      // "https://music.apple.com/it/album/nome-album/1234567890",
-    ],
-  },
-  {
-    name: "Pop",
-    albums: [
-      
-      "https://open.spotify.com/intl-it/album/3WZZF72ihlKPZBS4zSsNHl?si=k25SE_42SDmd4I1pS2l5Hg",
-      "https://open.spotify.com/intl-it/album/2PullXMROSpzCdFdzEmFhy?si=6wySdAGiTs2syWMR36o8uQ"
-      // "https://music.apple.com/it/album/nome-album/1234567890",
-    ],
-  },
-  {
-    name: "Rock",
-    albums: [
-      
-      "https://open.spotify.com/intl-it/album/7wOOA7l306K8HfBKfPoafr?si=EXClBelARWGqEl7Dbw_Meg"
-      // "https://music.apple.com/it/album/nome-album/1234567890",
-    ],
-  },
- 
-  {
-    name: "Hip-hop",
-    albums: [
-      
-      "https://open.spotify.com/intl-it/album/7ycBtnsMtyVbbwTfJwRjSP?si=ninuFAmZQZek94Ty9-Pd1g"
-      // "https://music.apple.com/it/album/nome-album/1234567890",
-    ],
-  },
-  {
-    name: "Punk",
-    albums: [
-      
-      "https://open.spotify.com/intl-it/album/3UoOO8m0oxxvUHXUKf3qcZ?si=Q6cy00V8S6eN3r5wJxaMjg"
-      // "https://music.apple.com/it/album/nome-album/1234567890",
-    ],
-  },
-  // {
-  //   name: "Hip hop",
-  //   albums: [
-  //     "https://open.spotify.com/album/XXXXXXXX",
-  //     { url: "https://open.spotify.com/album/YYYYYYYY", artist: "Artista" },
-  //   ],
-  // },
-];
-/* ========================================================== */
+/* I generi e gli album si gestiscono in data/albums.json */
 
 
 const CACHE_KEY = "album-cache-v1";
@@ -275,6 +215,10 @@ function addItem(id, label, count) {
 }
 addItem("all", "Tutti i generi", "");
 
+fetch("data/albums.json", { cache: "no-cache" })
+  .then(r => { if (!r.ok) throw new Error("albums.json: HTTP " + r.status); return r.json(); })
+  .then(GENRES => {
+
 GENRES.filter(g => g.albums && g.albums.length).forEach(g => {
   const id = slug(g.name);
 
@@ -311,6 +255,12 @@ GENRES.filter(g => g.albums && g.albums.length).forEach(g => {
 
 // Stato iniziale: se l'URL contiene #genere lo apro, altrimenti mostro tutti
 selectGenre(document.getElementById(location.hash.slice(1)) && location.hash.length > 1 ? location.hash.slice(1) : "all");
+
+  })
+  .catch(err => {
+    console.error(err);
+    main.innerHTML = '<p style="padding:24px 6vw;color:var(--muted)">Impossibile caricare l’elenco degli album (data/albums.json).</p>';
+  });
 </script>
 </body>
 </html>
