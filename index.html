@@ -2,23 +2,25 @@
 <html lang="it">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>I miei album preferiti</title>
 <style>
-  :root { --bg:#f6f4ef; --fg:#1a1a1a; --muted:#6b6b66; --line:#dcd8cf; }
-  @media (prefers-color-scheme: dark) {
-    :root { --bg:#121212; --fg:#f1efe9; --muted:#9a9890; --line:#2e2e2b; }
-  }
+  :root { --bg:#000; --fg:#f1efe9; --muted:#9a9890; --line:#2e2e2b; color-scheme:dark; }
   * { box-sizing: border-box; }
-  html { scroll-behavior: smooth; }
-  body { margin:0; background:var(--bg); color:var(--fg); min-height:100vh;
-    font-family:"Helvetica Neue",Helvetica,Arial,sans-serif; padding-bottom:48px; }
-  header { padding:48px 6vw 16px; }
-  h1 { margin:0 0 8px; font-size:clamp(28px,5vw,52px); letter-spacing:-0.03em; }
-  header p { margin:0; color:var(--muted); max-width:52ch; line-height:1.5; }
+  html, body { height:100%; overflow:hidden; overscroll-behavior:none; }
+  body { margin:0; background:#000; color:var(--fg);
+    font-family:"Helvetica Neue",Helvetica,Arial,sans-serif; }
 
-  /* Indice dei generi */
-  nav { position:sticky; top:0; z-index:5; background:var(--bg); display:flex; align-items:center; gap:14px; padding:10px 6vw; }
+  /* Titolo e hint: overlay fisso, non intercetta i gesti */
+  header { position:fixed; left:0; right:0; bottom:0; z-index:4; pointer-events:none;
+    padding:36px 6vw max(14px,env(safe-area-inset-bottom)); background:linear-gradient(transparent,rgba(0,0,0,.88) 65%); }
+  h1 { margin:0 0 4px; font-size:clamp(18px,4vw,28px); letter-spacing:-0.03em; }
+  header p { margin:0; color:var(--muted); max-width:52ch; line-height:1.4; font-size:12px; }
+  header .hint { margin-top:6px; font:10px/1 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; letter-spacing:.04em; }
+
+  /* Indice dei generi (fisso sopra il canvas) */
+  nav { position:fixed; top:0; left:0; right:0; z-index:5; background:var(--bg); display:flex; align-items:center; gap:14px;
+    padding:max(10px,env(safe-area-inset-top)) 6vw 10px; }
   .current { font-size:15px; font-weight:600; }
   /* Menu laterale */
   .burger { width:44px; height:44px; padding:0; border:1px solid var(--line); border-radius:50%; background:var(--bg);
@@ -28,7 +30,6 @@
   #drawer { position:fixed; top:0; left:0; bottom:0; width:min(82vw,300px); z-index:10; display:flex; flex-direction:column;
     background:var(--bg); border-right:1px solid var(--line); transform:translateX(-100%); visibility:hidden;
     transition:transform .25s ease, visibility 0s .25s; }
-  body.menu-open { overflow:hidden; }
   body.menu-open #drawer { transform:none; visibility:visible; transition:transform .25s ease; }
   body.menu-open .scrim { opacity:1; pointer-events:auto; }
   .drawer-head { display:flex; align-items:center; justify-content:space-between; padding:18px 20px 10px; font-weight:600; font-size:18px; }
@@ -40,43 +41,25 @@
   #drawer li button:hover, #drawer li button.active { background:var(--fg); color:var(--bg); }
   #drawer li button.active small, #drawer li button:hover small { color:inherit; opacity:.7; }
 
-  /* Con un solo genere selezionato: griglia a capo invece dello scorrimento orizzontale */
-  main.single .gallery { flex-wrap:wrap; overflow-x:visible; }
-  main.single .arrow { display:none !important; }
-
-  /* Vista "Tutti": un'unica griglia con tutti gli album, senza titoli di genere */
-  main.all { display:flex; flex-wrap:wrap; gap:20px; padding:24px 6vw 0; }
-  main.all .genre, main.all .wrap, main.all .gallery { display:contents; }
-  main.all .genre h2, main.all .arrow { display:none; }
-
-  /* Sezione genere */
-  .genre { margin-top:36px; }
-  .genre[hidden] { display:none; }
-  .genre h2 { margin:0; padding:0 6vw; font-size:clamp(20px,3vw,28px); letter-spacing:-0.02em;
-    display:flex; align-items:baseline; gap:10px; }
-  .genre h2 span { font-size:13px; color:var(--muted); font-weight:400; letter-spacing:0; }
-
-  .wrap { position:relative; }
-  .gallery { display:flex; gap:20px; overflow-x:auto; scroll-snap-type:x proximity;
-    padding:16px 6vw 20px; scroll-behavior:smooth; scrollbar-width:thin; }
-  .album { flex:0 0 auto; width:clamp(150px,20vw,220px); scroll-snap-align:start; }
-  .album a { color:inherit; text-decoration:none; display:block; }
-  .cover { width:100%; aspect-ratio:1; object-fit:cover; display:block; border-radius:6px;
-    background:var(--line); box-shadow:0 8px 24px rgba(0,0,0,.18); transition:transform .2s; }
-  .album a:hover .cover { transform:translateY(-4px); }
-  .title { margin:12px 0 2px; font-weight:600; font-size:15px; line-height:1.3;
-    display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden; }
-  .artist { margin:0; color:var(--muted); font-size:13px; }
-  .skeleton .cover { animation:pulse 1.2s ease-in-out infinite; box-shadow:none; }
+  /* Infinite canvas */
+  main { position:fixed; inset:0; overflow:hidden; touch-action:none; user-select:none; -webkit-user-select:none;
+    -webkit-touch-callout:none; cursor:grab; background:#000; }
+  main.grabbing { cursor:grabbing; }
+  .item { position:absolute; left:0; top:0; will-change:transform; }
+  .item[hidden] { display:none; }
+  .card { transition:transform .3s cubic-bezier(.2,.7,.2,1); }
+  .album a { color:inherit; text-decoration:none; display:block; -webkit-user-drag:none; }
+  .cover { width:100%; aspect-ratio:1; object-fit:cover; display:block; border-radius:2px;
+    background:var(--line); -webkit-user-drag:none; pointer-events:none; }
+  .title, .artist, .dur { margin:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;
+    font:11px/1.35 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
+  .title { margin-top:10px; font-weight:600; }
+  .artist, .dur { color:var(--muted); }
+  .skeleton .cover { animation:pulse 1.2s ease-in-out infinite; }
   .error .cover { display:flex; align-items:center; justify-content:center; padding:12px;
     font-size:12px; color:var(--muted); text-align:center; }
   @keyframes pulse { 50% { opacity:.45; } }
-
-  .arrow { position:absolute; top:calc(50% - 30px); width:44px; height:44px; border-radius:50%;
-    border:1px solid var(--line); background:var(--bg); color:var(--fg); cursor:pointer;
-    font-size:20px; display:none; align-items:center; justify-content:center; z-index:2; }
-  .arrow.left { left:12px; } .arrow.right { right:12px; }
-  @media (hover:hover) and (min-width:700px) { .arrow { display:flex; } }
+  @media (prefers-reduced-motion:reduce) { .card { transition:none; } }
 </style>
 </head>
 <body>
@@ -84,7 +67,7 @@
 <header>
   <h1>I miei album</h1>
   <p>Le mie reference e i dischi che ascolto di più, divisi per genere.</p>
-  <p>-----</p>
+  <p class="hint">Trascina per esplorare</p>
 </header>
 
 <nav id="nav"></nav>
@@ -115,10 +98,24 @@ function parseAlbums(text) {
 }
 
 
-const CACHE_KEY = "album-cache-v1";
+const CACHE_KEY = "album-cache-v2";
 let cache = {};
 try { cache = JSON.parse(localStorage.getItem(CACHE_KEY)) || {}; } catch (e) {}
 const saveCache = () => { try { localStorage.setItem(CACHE_KEY, JSON.stringify(cache)); } catch (e) {} };
+
+// Durata totale dell'album (somma delle tracce) da iTunes; 0 se non disponibile
+async function albumMs(id, country) {
+  try {
+    const r = await fetch("https://itunes.apple.com/lookup?entity=song&limit=200&id=" + id + "&country=" + country);
+    const res = (await r.json()).results || [];
+    return res.filter(x => x.wrapperType === "track").reduce((s, x) => s + (x.trackTimeMillis || 0), 0);
+  } catch (e) { return 0; }
+}
+function fmtDur(ms) {
+  if (!ms) return "";
+  const min = Math.round(ms / 60000), h = Math.floor(min / 60);
+  return h ? h + " h " + String(min % 60).padStart(2, "0") + " min" : min + " min";
+}
 
 async function fromSpotify(url) {
   const m = url.match(/open\.spotify\.com\/(?:[a-z-]+\/)?(album|track)\/([A-Za-z0-9]+)/);
@@ -127,15 +124,15 @@ async function fromSpotify(url) {
   const r = await fetch("https://open.spotify.com/oembed?url=" + encodeURIComponent(clean));
   if (!r.ok) throw new Error("Spotify non risponde");
   const d = await r.json();
-  let artist = "";
+  let artist = "", duration = 0;
   // L’oEmbed di Spotify non include l’artista: lo cerco su iTunes in base al titolo
   try {
     const s = await fetch("https://itunes.apple.com/search?entity=album&limit=5&term=" + encodeURIComponent(d.title));
     const results = (await s.json()).results || [];
     const hit = results.find(x => x.collectionName.toLowerCase().startsWith(d.title.toLowerCase())) || results[0];
-    if (hit) artist = hit.artistName;
+    if (hit) { artist = hit.artistName; duration = await albumMs(hit.collectionId, "it"); }
   } catch (e) {}
-  return { title: d.title, artist, cover: d.thumbnail_url, url: clean };
+  return { title: d.title, artist, duration, cover: d.thumbnail_url, url: clean };
 }
 
 async function fromApple(url) {
@@ -146,9 +143,11 @@ async function fromApple(url) {
   const r = await fetch("https://itunes.apple.com/lookup?id=" + id + "&country=" + country);
   const x = ((await r.json()).results || [])[0];
   if (!x) throw new Error("album non trovato");
+  const duration = x.wrapperType === "track" ? (x.trackTimeMillis || 0) : await albumMs(x.collectionId, country);
   return {
     title: x.collectionName || x.trackName,
     artist: x.artistName,
+    duration,
     cover: (x.artworkUrl100 || "").replace(/\d+x\d+bb/, "600x600bb"),
     url
   };
@@ -166,23 +165,25 @@ async function resolve(url) {
 
 function makeCard() {
   const el = document.createElement("div");
-  el.className = "album skeleton";
-  el.innerHTML = '<a target="_blank" rel="noopener"><img class="cover" alt=""><p class="title">&nbsp;</p><p class="artist">&nbsp;</p></a>';
+  el.className = "item album skeleton";
+  el.innerHTML = '<div class="card"><a target="_blank" rel="noopener" draggable="false"><img class="cover" alt="" draggable="false" decoding="async">' +
+    '<p class="title">&nbsp;</p><p class="artist">&nbsp;</p><p class="dur">&nbsp;</p></a></div>';
   return el;
 }
 
 function fill(el, a) {
-  el.className = "album";
+  el.classList.remove("skeleton");
   el.querySelector("a").href = a.url;
   const img = el.querySelector("img");
   img.src = a.cover; img.alt = "Copertina di " + a.title;
   el.querySelector(".title").textContent = a.title;
   el.querySelector(".artist").textContent = a.artist || "";
+  el.querySelector(".dur").textContent = fmtDur(a.duration);
 }
 
 function fail(el, url, err) {
-  el.className = "album error";
-  el.innerHTML = '<a href="' + url + '" target="_blank" rel="noopener"><div class="cover">Impossibile caricare<br>questo link</div>' +
+  el.classList.remove("skeleton"); el.classList.add("error");
+  el.querySelector(".card").innerHTML = '<a href="' + url + '" target="_blank" rel="noopener" draggable="false"><div class="cover">Impossibile caricare<br>questo link</div>' +
     '<p class="title">' + url.replace(/^https?:\/\//, "").slice(0, 40) + '…</p></a>';
   console.warn("Album non risolto:", url, err);
 }
@@ -192,13 +193,141 @@ const slug = s => "g-" + s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036
 const main = document.getElementById("genres");
 const nav = document.getElementById("nav");
 
+/* ---------- Infinite canvas ---------- */
+const TXT = 58;                     // altezza riservata al testo sotto la copertina
+const items = [];                   // { el, genre, bx, by, sz }
+let active = [], W = 1, H = 1, CW = 1, CH = 1, lastSig = "";
+const cam = { x: 0, y: 0 };
+let vx = 0, vy = 0, raf = 0, last = 0;
+
+function mulberry32(a) {            // PRNG con seed fisso: layout stabile
+  return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a);
+    t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; };
+}
+const wrap = (v, size, off) => ((v - off) % size + size) % size + off;
+
+function render() {
+  for (const it of active) {
+    const x = wrap(it.bx + cam.x, W, -CW), y = wrap(it.by + cam.y, H, -CH);
+    it.el.style.transform = "translate3d(" + x.toFixed(1) + "px," + y.toFixed(1) + "px,0)";
+  }
+}
+
+/* Il "mondo" è una tessera W×H, più grande dello schermo, che si ripete all'infinito:
+   ogni album compare una volta sola e viene riposizionato quando esce dallo schermo.
+   Ogni album vive in una propria cella con jitter casuale → nessuna sovrapposizione. */
+function layout(force) {
+  const vw = window.innerWidth, vh = window.innerHeight;
+  const S = Math.round(Math.min(Math.max(Math.min(vw, vh) * 0.36, 124), 210) / 4) * 4;
+  active = items.filter(it => !it.el.hidden);
+  const n = Math.max(active.length, 1);
+  const cw = Math.round(S * 1.6), ch = Math.round(S * 1.45 + TXT);
+  const minC = Math.ceil((vw + cw) / cw), minR = Math.ceil((vh + ch) / ch);
+  const cols = Math.max(minC, Math.ceil(Math.sqrt(n * ch / cw)));
+  const rows = Math.max(minR, Math.ceil(n / cols));
+  const sig = [S, cols, rows, active.length].join();
+  if (!force && sig === lastSig) return;
+  lastSig = sig;
+  CW = cw; CH = ch; W = cols * cw; H = rows * ch;
+
+  const rng = mulberry32(20240607);
+  const cells = Array.from({ length: cols * rows }, (_, i) => i);
+  for (let i = cells.length - 1; i > 0; i--) { const j = Math.floor(rng() * (i + 1)); [cells[i], cells[j]] = [cells[j], cells[i]]; }
+  active.forEach((it, i) => {
+    const c = cells[i], sz = Math.round(S * (0.72 + 0.28 * rng()));
+    it.sz = sz; it.el.style.width = sz + "px";
+    it.bx = (c % cols) * cw + rng() * (cw - sz);
+    it.by = Math.floor(c / cols) * ch + rng() * (ch - sz - TXT);
+  });
+  render();
+}
+
+function tick(t) {
+  raf = 0;
+  const dt = Math.min(32, t - last || 16); last = t;
+  if (!dragging) {
+    const f = Math.pow(0.95, dt / 16.67);
+    vx *= f; vy *= f; cam.x += vx * dt; cam.y += vy * dt;
+  }
+  render();
+  if (dragging || Math.hypot(vx, vy) > 0.01) raf = requestAnimationFrame(tick);
+}
+function kick() { if (!raf) { last = 0; raf = requestAnimationFrame(tick); } }
+
+// Trascinamento (mouse, touch, penna) con inerzia
+let down = false, dragging = false, justDragged = false, pid = 0, sx = 0, sy = 0, lx = 0, ly = 0, lt = 0;
+main.addEventListener("pointerdown", e => {
+  if (e.pointerType === "mouse" && e.button !== 0) return;
+  down = true; dragging = false; pid = e.pointerId;
+  sx = lx = e.clientX; sy = ly = e.clientY; lt = e.timeStamp; vx = vy = 0;
+});
+main.addEventListener("pointermove", e => {
+  if (!down || e.pointerId !== pid) return;
+  if (!dragging) {
+    if (Math.hypot(e.clientX - sx, e.clientY - sy) < 6) return;   // soglia: sotto è un tap/click
+    dragging = true; justDragged = true;
+    try { main.setPointerCapture(pid); } catch (err) {}
+    main.classList.add("grabbing");
+    lx = e.clientX; ly = e.clientY; lt = e.timeStamp; kick(); return;
+  }
+  const dt = Math.max(1, e.timeStamp - lt), dx = e.clientX - lx, dy = e.clientY - ly;
+  cam.x += dx; cam.y += dy;
+  vx = 0.8 * (dx / dt) + 0.2 * vx; vy = 0.8 * (dy / dt) + 0.2 * vy;
+  lx = e.clientX; ly = e.clientY; lt = e.timeStamp;
+});
+function endDrag(e) {
+  if (!down || e.pointerId !== pid) return;
+  down = false;
+  if (dragging) {
+    dragging = false;
+    if (e.type === "pointercancel" || e.timeStamp - lt > 80) vx = vy = 0;
+    main.classList.remove("grabbing");
+    kick();
+    setTimeout(() => { justDragged = false; }, 60);
+  }
+}
+main.addEventListener("pointerup", endDrag);
+main.addEventListener("pointercancel", endDrag);
+// Dopo un trascinamento il click sul link viene bloccato; un tap semplice funziona come prima
+main.addEventListener("click", e => { if (justDragged) { e.preventDefault(); e.stopPropagation(); } }, true);
+main.addEventListener("dragstart", e => e.preventDefault());
+
+// Trackpad / rotella
+main.addEventListener("wheel", e => {
+  e.preventDefault();
+  const k = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? window.innerHeight : 1;
+  let dx = e.deltaX * k, dy = e.deltaY * k;
+  if (e.shiftKey && !dx) { dx = dy; dy = 0; }
+  cam.x -= dx; cam.y -= dy; vx = vy = 0; kick();
+}, { passive: false });
+
+let rzPending = false;
+window.addEventListener("resize", () => {
+  if (rzPending) return; rzPending = true;
+  requestAnimationFrame(() => { rzPending = false; layout(false); render(); });
+});
+
+// Hover: leggero ingrandimento + effetto magnetico (solo mouse)
+const canHover = window.matchMedia("(hover:hover) and (pointer:fine)").matches &&
+  !window.matchMedia("(prefers-reduced-motion:reduce)").matches;
+function addMagnet(it) {
+  const card = it.el.querySelector(".card");
+  it.el.addEventListener("pointermove", e => {
+    if (e.pointerType !== "mouse" || dragging || down) return;
+    const r = it.el.getBoundingClientRect();
+    const dx = (e.clientX - (r.left + r.width / 2)) * 0.12, dy = (e.clientY - (r.top + it.sz / 2)) * 0.12;
+    card.style.transform = "translate3d(" + dx.toFixed(1) + "px," + dy.toFixed(1) + "px,0) scale(1.06)";
+  });
+  it.el.addEventListener("pointerleave", () => { card.style.transform = ""; });
+}
+
 function selectGenre(id) {
-  main.classList.toggle("single", id !== "all");
-  main.classList.toggle("all", id === "all");
   list.querySelectorAll("button").forEach(b => b.classList.toggle("active", b.dataset.id === id));
   const act = list.querySelector('button[data-id="' + id + '"]');
   if (act) currentEl.textContent = act.firstChild.textContent;
-  main.querySelectorAll(".genre").forEach(sec => { sec.hidden = id !== "all" && sec.id !== id; });
+  items.forEach(it => { it.el.hidden = id !== "all" && it.genre !== id; });
+  cam.x = 0; cam.y = 70; vx = vy = 0;
+  layout(true);
   try { history.replaceState(null, "", id === "all" ? location.pathname : "#" + id); } catch (e) {}
 }
 
@@ -231,7 +360,7 @@ function addItem(id, label, count) {
   b.innerHTML = "<span></span><small></small>";
   b.firstChild.textContent = label;
   b.lastChild.textContent = count;
-  b.onclick = () => { selectGenre(id); setMenu(false); window.scrollTo(0, 0); };
+  b.onclick = () => { selectGenre(id); setMenu(false); };
   li.append(b); list.append(li);
 }
 addItem("all", "Tutti i generi", "");
@@ -247,41 +376,27 @@ GENRES.filter(g => g.albums && g.albums.length).forEach(g => {
   // Voce nel menu laterale
   addItem(id, g.name, g.albums.length);
 
-  // Sezione
-  const sec = document.createElement("section");
-  sec.className = "genre"; sec.id = id;
-  sec.innerHTML = '<h2></h2><div class="wrap"><button class="arrow left" aria-label="Indietro">‹</button>' +
-    '<div class="gallery"></div><button class="arrow right" aria-label="Avanti">›</button></div>';
-  const h2 = sec.querySelector("h2");
-  h2.textContent = g.name;
-  const count = document.createElement("span");
-  count.textContent = g.albums.length + (g.albums.length === 1 ? " album" : " album");
-  h2.append(count);
-
-  const gallery = sec.querySelector(".gallery");
-  const step = () => gallery.clientWidth * 0.8;
-  sec.querySelector(".left").onclick = () => gallery.scrollBy({ left: -step() });
-  sec.querySelector(".right").onclick = () => gallery.scrollBy({ left: step() });
-
   g.albums.forEach(item => {
     const o = typeof item === "string" ? { url: item } : item;
     const el = makeCard();
-    gallery.append(el);
+    const it = { el, genre: id, bx: 0, by: 0, sz: 0 };
+    items.push(it);
+    if (canHover) addMagnet(it);
+    main.append(el);
     resolve(o.url.trim())
       .then(a => fill(el, { ...a, title: o.title || a.title, artist: o.artist || a.artist }))
       .catch(e => fail(el, o.url, e));
   });
-
-  main.append(sec);
 });
 
 // Stato iniziale: se l'URL contiene #genere lo apro, altrimenti mostro tutti
-selectGenre(document.getElementById(location.hash.slice(1)) && location.hash.length > 1 ? location.hash.slice(1) : "all");
+const h = location.hash.slice(1);
+selectGenre(h && list.querySelector('button[data-id="' + CSS.escape(h) + '"]') ? h : "all");
 
   })
   .catch(err => {
     console.error(err);
-    main.innerHTML = '<p style="padding:24px 6vw;color:var(--muted)">Impossibile caricare l’elenco degli album (data/albums.txt).</p>';
+    main.innerHTML = '<p style="padding:90px 6vw 0;color:var(--muted)">Impossibile caricare l’elenco degli album (data/albums.txt).</p>';
   });
 </script>
 </body>
