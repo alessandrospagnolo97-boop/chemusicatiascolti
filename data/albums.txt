@@ -1,13 +1,29 @@
-# Synthpop
+# Pop Alternative
 https://open.spotify.com/intl-it/album/2Htq1sHgmdGffojIBM6Q1s
+https://open.spotify.com/intl-it/album/6Z1zv6Hw9bdvSoxI5uYk2h?si=RYzOSiKvReeg-23FfgBx7Q
+https://open.spotify.com/intl-it/album/12zl1WmHPFCSyKYbL4vBZn?si=7nHTWBRkTWGCagsVumHqWA
+https://open.spotify.com/intl-it/album/6PWXKiakqhI17mTYM4y6oY?si=lT_WjGTeSSaZGKZN6uAPJg
+https://open.spotify.com/intl-it/album/0kvoCDiWdZ7eHPW7xvdg3z?si=BNoQgVPHREiRbRtFQqo2hA
 
 # Pop
 https://open.spotify.com/intl-it/album/3WZZF72ihlKPZBS4zSsNHl?si=k25SE_42SDmd4I1pS2l5Hg
 https://open.spotify.com/intl-it/album/2PullXMROSpzCdFdzEmFhy?si=6wySdAGiTs2syWMR36o8uQ
 https://open.spotify.com/album/7fJJK56U9fHixgO0HQkhtI?si=UCngzdFMQC2efpMjyByaBQ
 
+# Indie Folk
+https://open.spotify.com/intl-it/album/63ButSDtUefzCmdE3AXdor?si=TPSMiTMbR36ZlkUcUvWunQ
+https://open.spotify.com/intl-it/album/30fIbIvd1AN04FrBt12KhM?si=L1rPK4OSQRmdK-P0agXONg
+https://open.spotify.com/intl-it/album/6mQC4efviywahzfwgLvye0?si=ZX7k6y8FSECaAd2ha0j5_A
+https://open.spotify.com/intl-it/album/7EJ0OT5ZqybXxcYRa6mccM?si=6cc7572551af475d
+https://open.spotify.com/intl-it/album/6Pp6qGEywDdofgFC1oFbSH?si=dJbzjo_5TimEHEb8VAYdPA
+
 # Rock
 https://open.spotify.com/intl-it/album/7wOOA7l306K8HfBKfPoafr?si=EXClBelARWGqEl7Dbw_Meg
+
+# Rock Alternative
+https://open.spotify.com/intl-it/album/310lmJwtNvQv6SERdmD34Z?si=6abf57ac05074708
+
+# Metal
 
 # Hip-hop
 https://open.spotify.com/intl-it/album/7ycBtnsMtyVbbwTfJwRjSP?si=ninuFAmZQZek94Ty9-Pd1g
@@ -19,3 +35,14 @@ https://open.spotify.com/intl-it/album/3UoOO8m0oxxvUHXUKf3qcZ?si=Q6cy00V8S6eN3r5
 
 # R&B
 https://open.spotify.com/album/4HTVABUq8amDUxBv3zJbX4?si=wORqqxF5SI-01695u1Anzg&utm
+
+# Soul
+
+# Neo Soul
+https://open.spotify.com/album/6iuOPJ2AAEdG71e5Y1mDMy?si=pYWtM2yNR0WhhanpA5OdtQ
+https://open.spotify.com/intl-it/album/4E1XUBMTpLO7GpBzUo65Jp?si=7_EDHwWzRiqnWj7qUiieWg
+
+# Album live
+https://open.spotify.com/intl-it/album/5j6YJDxFLm027k83JLRjno?si=ZCEc4zN0TRS9bXE146BwSA
+https://open.spotify.com/intl-it/album/2x0Cao3ZMeAFmTEtXxcFRb?si=tJhomqWqTLeB63Z08LnJOw
+https://open.spotify.com/intl-it/album/4Dgxy95K9BWkDUvQPTaYBb?si=7Jox_60NR0GkXL6FY444Ng
