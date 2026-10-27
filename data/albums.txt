@@ -4,6 +4,8 @@ https://open.spotify.com/intl-it/album/6Z1zv6Hw9bdvSoxI5uYk2h?si=RYzOSiKvReeg-23
 https://open.spotify.com/intl-it/album/12zl1WmHPFCSyKYbL4vBZn?si=7nHTWBRkTWGCagsVumHqWA
 https://open.spotify.com/intl-it/album/6PWXKiakqhI17mTYM4y6oY?si=lT_WjGTeSSaZGKZN6uAPJg
 https://open.spotify.com/intl-it/album/0kvoCDiWdZ7eHPW7xvdg3z?si=BNoQgVPHREiRbRtFQqo2hA
+https://open.spotify.com/intl-it/album/4JDXBZdRPId4devseaAOKH?si=bf7fdb1b03d14af2
+https://open.spotify.com/intl-it/album/2rhNQbqRNxiNQkDXTffe1V?si=a3a98d03f2dc4cd7
 
 # Pop
 https://open.spotify.com/intl-it/album/3WZZF72ihlKPZBS4zSsNHl?si=k25SE_42SDmd4I1pS2l5Hg
@@ -22,25 +24,42 @@ https://open.spotify.com/intl-it/album/7wOOA7l306K8HfBKfPoafr?si=EXClBelARWGqEl7
 
 # Rock Alternative
 https://open.spotify.com/intl-it/album/310lmJwtNvQv6SERdmD34Z?si=6abf57ac05074708
+https://open.spotify.com/intl-it/album/58jffxpfw7XbsWGpThVWXV?si=9aa7e60ed12642f2
+
+# Post Rock
+https://open.spotify.com/intl-it/album/3wRBlpk5PRoixwOnLujTal?si=bb2fcd2d52b64402
 
 # Metal
+https://open.spotify.com/intl-it/album/7FqHuAvmREiIwVXVpZ9ooP?si=404b8b22d0f341f0
 
 # Hip-hop
 https://open.spotify.com/intl-it/album/7ycBtnsMtyVbbwTfJwRjSP?si=ninuFAmZQZek94Ty9-Pd1g
 https://open.spotify.com/intl-it/album/6idVoBWP2mt1qoMtASm3gc?si=4EMsSaVoQwycwJAlik1YwQ
 https://open.spotify.com/album/2nkto6YNI4rUYTLqEwWJ3o?si=m5yDEBXzSWWJU5tAocepzw&utm
+https://open.spotify.com/intl-it/album/2jK2rbbnrzsId5WWSc67HP?si=57bcf7b212dd4dbe
 
 # Punk
 https://open.spotify.com/intl-it/album/3UoOO8m0oxxvUHXUKf3qcZ?si=Q6cy00V8S6eN3r5wJxaMjg
 
 # R&B
 https://open.spotify.com/album/4HTVABUq8amDUxBv3zJbX4?si=wORqqxF5SI-01695u1Anzg&utm
+https://open.spotify.com/intl-it/album/1RM6MGv6bcl6NrAG8PGoZk?si=d865aa794e7443b3
+https://open.spotify.com/intl-it/album/7qtclyGoUMSYxOgMb0sXg5?si=ff867ae43dc04d00
 
 # Soul
+https://open.spotify.com/intl-it/album/2HVx2tiZnLX8xeaUthed1e?si=6768419a42894862
 
 # Neo Soul
 https://open.spotify.com/album/6iuOPJ2AAEdG71e5Y1mDMy?si=pYWtM2yNR0WhhanpA5OdtQ
 https://open.spotify.com/intl-it/album/4E1XUBMTpLO7GpBzUo65Jp?si=7_EDHwWzRiqnWj7qUiieWg
+https://open.spotify.com/intl-it/album/3Q4mnXDUcVMhx3AVRCbcgi?si=d1954255fa7c4135
+https://open.spotify.com/intl-it/album/5OZ44LaqZbpP3m9B3oT8br?si=116030cb4a4e456e
+https://open.spotify.com/intl-it/album/5GuWww4OaildzkmTTlfMN3?si=8dea9ddeed4744e1
+
+# Jazz
+https://open.spotify.com/intl-it/album/38XUFMsLLAttgWdD40CTaL?si=13173f2c4cb34e7e
+https://open.spotify.com/intl-it/album/2qa4l2tbZuGJytrOM6Fxj8?si=ab742ad68dac4557
+https://open.spotify.com/intl-it/album/0rLSX7OMtwRHDjjCWL6tHC?si=222c6261100049d2
 
 # Album live
 https://open.spotify.com/intl-it/album/5j6YJDxFLm027k83JLRjno?si=ZCEc4zN0TRS9bXE146BwSA
