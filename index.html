@@ -45,7 +45,7 @@
   main { position:fixed; inset:0; overflow:hidden; touch-action:none; user-select:none; -webkit-user-select:none;
     -webkit-touch-callout:none; cursor:grab; background:#000; }
   main.grabbing { cursor:grabbing; }
-  .item { position:absolute; left:0; top:0; will-change:transform; }
+  .item { position:absolute; left:0; top:0; will-change:transform; transform-origin:0 0; }
   .item[hidden] { display:none; }
   .card { transition:transform .3s cubic-bezier(.2,.7,.2,1); }
   .album a { color:inherit; text-decoration:none; display:block; -webkit-user-drag:none; }
@@ -60,6 +60,15 @@
     font-size:12px; color:var(--muted); text-align:center; }
   @keyframes pulse { 50% { opacity:.45; } }
   @media (prefers-reduced-motion:reduce) { .card { transition:none; } }
+
+  /* Vista di un singolo genere: griglia a capo con scroll verticale (come prima), sempre su nero */
+  #gtitle { display:none; margin:0; font-size:clamp(20px,3vw,28px); letter-spacing:-0.02em; align-items:baseline; gap:10px; }
+  #gtitle span { font-size:13px; color:var(--muted); font-weight:400; letter-spacing:0; }
+  main.single { display:flex; flex-wrap:wrap; align-content:flex-start; gap:20px; padding:84px 6vw 130px;
+    overflow-y:auto; overflow-x:hidden; touch-action:pan-y; cursor:auto; user-select:auto; -webkit-user-select:auto; }
+  main.single #gtitle { display:flex; width:100%; }
+  main.single .item { position:relative; width:clamp(150px,20vw,220px) !important; transform:none !important; flex:0 0 auto; }
+  body.single-view header .hint { display:none; }
 </style>
 </head>
 <body>
@@ -67,7 +76,7 @@
 <header>
   <h1>I miei album</h1>
   <p>Le mie reference e i dischi che ascolto di più, divisi per genere.</p>
-  <p class="hint">Trascina per esplorare</p>
+  <p class="hint">Trascina per esplorare · pizzica per lo zoom</p>
 </header>
 
 <nav id="nav"></nav>
@@ -191,6 +200,9 @@ function fail(el, url, err) {
 const slug = s => "g-" + s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-");
 
 const main = document.getElementById("genres");
+const gtitle = document.createElement("h2");
+gtitle.id = "gtitle";
+main.append(gtitle);
 const nav = document.getElementById("nav");
 
 /* ---------- Infinite canvas ---------- */
@@ -198,7 +210,15 @@ const TXT = 58;                     // altezza riservata al testo sotto la coper
 const items = [];                   // { el, genre, bx, by, sz }
 let active = [], W = 1, H = 1, CW = 1, CH = 1, lastSig = "";
 const cam = { x: 0, y: 0 };
-let vx = 0, vy = 0, raf = 0, last = 0;
+let vx = 0, vy = 0, raf = 0, last = 0, single = false;
+const ZMIN = 0.55, ZMAX = 1.6;      // limiti dello zoom
+let z = 1;
+const clampZ = v => Math.min(ZMAX, Math.max(ZMIN, v));
+// Zoom attorno al punto (cx,cy) dello schermo: il punto sotto le dita resta fermo
+function setZoom(nz, cx, cy) {
+  nz = clampZ(nz);
+  cam.x += cx / nz - cx / z; cam.y += cy / nz - cy / z; z = nz;
+}
 
 function mulberry32(a) {            // PRNG con seed fisso: layout stabile
   return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a);
@@ -208,8 +228,8 @@ const wrap = (v, size, off) => ((v - off) % size + size) % size + off;
 
 function render() {
   for (const it of active) {
-    const x = wrap(it.bx + cam.x, W, -CW), y = wrap(it.by + cam.y, H, -CH);
-    it.el.style.transform = "translate3d(" + x.toFixed(1) + "px," + y.toFixed(1) + "px,0)";
+    const x = wrap(it.bx + cam.x, W, -CW) * z, y = wrap(it.by + cam.y, H, -CH) * z;
+    it.el.style.transform = "translate3d(" + x.toFixed(1) + "px," + y.toFixed(1) + "px,0) scale(" + z.toFixed(3) + ")";
   }
 }
 
@@ -217,12 +237,13 @@ function render() {
    ogni album compare una volta sola e viene riposizionato quando esce dallo schermo.
    Ogni album vive in una propria cella con jitter casuale → nessuna sovrapposizione. */
 function layout(force) {
+  if (single) { active = []; lastSig = ""; return; }   // vista genere: griglia CSS, nessun posizionamento
   const vw = window.innerWidth, vh = window.innerHeight;
   const S = Math.round(Math.min(Math.max(Math.min(vw, vh) * 0.36, 124), 210) / 4) * 4;
   active = items.filter(it => !it.el.hidden);
   const n = Math.max(active.length, 1);
-  const cw = Math.round(S * 1.6), ch = Math.round(S * 1.45 + TXT);
-  const minC = Math.ceil((vw + cw) / cw), minR = Math.ceil((vh + ch) / ch);
+  const cw = Math.round(S * 1.3), ch = Math.round(S * 1.12 + TXT);
+  const minC = Math.ceil((vw / ZMIN + cw) / cw), minR = Math.ceil((vh / ZMIN + ch) / ch);
   const cols = Math.max(minC, Math.ceil(Math.sqrt(n * ch / cw)));
   const rows = Math.max(minR, Math.ceil(n / cols));
   const sig = [S, cols, rows, active.length].join();
@@ -254,14 +275,35 @@ function tick(t) {
 }
 function kick() { if (!raf) { last = 0; raf = requestAnimationFrame(tick); } }
 
-// Trascinamento (mouse, touch, penna) con inerzia
-let down = false, dragging = false, justDragged = false, pid = 0, sx = 0, sy = 0, lx = 0, ly = 0, lt = 0;
+// Trascinamento (mouse, touch, penna) con inerzia + pinch a due dita
+const ptrs = new Map();
+let down = false, dragging = false, justDragged = false, pid = 0, sx = 0, sy = 0, lx = 0, ly = 0, lt = 0, pinch = null;
+function startPinch() {
+  const [a, b] = [...ptrs.values()];
+  pinch = { d: Math.hypot(a.x - b.x, a.y - b.y) || 1, z, mx: (a.x + b.x) / 2, my: (a.y + b.y) / 2 };
+  down = true; dragging = true; justDragged = true; vx = vy = 0;
+  for (const id of ptrs.keys()) { try { main.setPointerCapture(id); } catch (err) {} }
+  main.classList.add("grabbing"); kick();
+}
 main.addEventListener("pointerdown", e => {
-  if (e.pointerType === "mouse" && e.button !== 0) return;
+  if (single || (e.pointerType === "mouse" && e.button !== 0)) return;
+  ptrs.set(e.pointerId, { x: e.clientX, y: e.clientY });
+  if (ptrs.size === 2) { startPinch(); return; }
+  if (ptrs.size > 2) return;
   down = true; dragging = false; pid = e.pointerId;
   sx = lx = e.clientX; sy = ly = e.clientY; lt = e.timeStamp; vx = vy = 0;
 });
 main.addEventListener("pointermove", e => {
+  const p = ptrs.get(e.pointerId);
+  if (p) { p.x = e.clientX; p.y = e.clientY; }
+  if (pinch) {
+    if (ptrs.size < 2) return;
+    const [a, b] = [...ptrs.values()];
+    const d = Math.hypot(a.x - b.x, a.y - b.y) || 1, mx = (a.x + b.x) / 2, my = (a.y + b.y) / 2;
+    setZoom(pinch.z * d / pinch.d, mx, my);
+    cam.x += (mx - pinch.mx) / z; cam.y += (my - pinch.my) / z;
+    pinch.mx = mx; pinch.my = my; kick(); return;
+  }
   if (!down || e.pointerId !== pid) return;
   if (!dragging) {
     if (Math.hypot(e.clientX - sx, e.clientY - sy) < 6) return;   // soglia: sotto è un tap/click
@@ -270,12 +312,25 @@ main.addEventListener("pointermove", e => {
     main.classList.add("grabbing");
     lx = e.clientX; ly = e.clientY; lt = e.timeStamp; kick(); return;
   }
-  const dt = Math.max(1, e.timeStamp - lt), dx = e.clientX - lx, dy = e.clientY - ly;
+  const dt = Math.max(1, e.timeStamp - lt), dx = (e.clientX - lx) / z, dy = (e.clientY - ly) / z;
   cam.x += dx; cam.y += dy;
   vx = 0.8 * (dx / dt) + 0.2 * vx; vy = 0.8 * (dy / dt) + 0.2 * vy;
   lx = e.clientX; ly = e.clientY; lt = e.timeStamp;
 });
 function endDrag(e) {
+  ptrs.delete(e.pointerId);
+  if (pinch) {
+    if (ptrs.size >= 2) return;
+    pinch = null; vx = vy = 0;
+    if (ptrs.size === 1) {            // un dito resta: riprendo il trascinamento da lì
+      const [id, p] = [...ptrs][0];
+      pid = id; down = true; dragging = true; lx = p.x; ly = p.y; lt = e.timeStamp; return;
+    }
+    down = false; dragging = false;
+    main.classList.remove("grabbing"); kick();
+    setTimeout(() => { justDragged = false; }, 60);
+    return;
+  }
   if (!down || e.pointerId !== pid) return;
   down = false;
   if (dragging) {
@@ -292,13 +347,15 @@ main.addEventListener("pointercancel", endDrag);
 main.addEventListener("click", e => { if (justDragged) { e.preventDefault(); e.stopPropagation(); } }, true);
 main.addEventListener("dragstart", e => e.preventDefault());
 
-// Trackpad / rotella
+// Trackpad / rotella (ctrl + rotella o pinch da trackpad = zoom)
 main.addEventListener("wheel", e => {
+  if (single) return;                // nella vista genere scorre normalmente
   e.preventDefault();
   const k = e.deltaMode === 1 ? 16 : e.deltaMode === 2 ? window.innerHeight : 1;
   let dx = e.deltaX * k, dy = e.deltaY * k;
+  if (e.ctrlKey) { setZoom(z * Math.exp(-dy * 0.01), e.clientX, e.clientY); vx = vy = 0; kick(); return; }
   if (e.shiftKey && !dx) { dx = dy; dy = 0; }
-  cam.x -= dx; cam.y -= dy; vx = vy = 0; kick();
+  cam.x -= dx / z; cam.y -= dy / z; vx = vy = 0; kick();
 }, { passive: false });
 
 let rzPending = false;
@@ -315,7 +372,7 @@ function addMagnet(it) {
   it.el.addEventListener("pointermove", e => {
     if (e.pointerType !== "mouse" || dragging || down) return;
     const r = it.el.getBoundingClientRect();
-    const dx = (e.clientX - (r.left + r.width / 2)) * 0.12, dy = (e.clientY - (r.top + it.sz / 2)) * 0.12;
+    const dx = (e.clientX - (r.left + r.width / 2)) * 0.12, dy = (e.clientY - (r.top + r.width / 2)) * 0.12;
     card.style.transform = "translate3d(" + dx.toFixed(1) + "px," + dy.toFixed(1) + "px,0) scale(1.06)";
   });
   it.el.addEventListener("pointerleave", () => { card.style.transform = ""; });
@@ -325,8 +382,16 @@ function selectGenre(id) {
   list.querySelectorAll("button").forEach(b => b.classList.toggle("active", b.dataset.id === id));
   const act = list.querySelector('button[data-id="' + id + '"]');
   if (act) currentEl.textContent = act.firstChild.textContent;
-  items.forEach(it => { it.el.hidden = id !== "all" && it.genre !== id; });
-  cam.x = 0; cam.y = 70; vx = vy = 0;
+  single = id !== "all";
+  main.classList.toggle("single", single);
+  document.body.classList.toggle("single-view", single);
+  if (act && single) {
+    gtitle.textContent = act.firstChild.textContent;
+    const c = document.createElement("span"); c.textContent = act.lastChild.textContent + " album"; gtitle.append(c);
+  }
+  items.forEach(it => { it.el.hidden = single && it.genre !== id; });
+  main.scrollTop = 0;
+  cam.x = 0; cam.y = 70 / z; vx = vy = 0;
   layout(true);
   try { history.replaceState(null, "", id === "all" ? location.pathname : "#" + id); } catch (e) {}
 }
