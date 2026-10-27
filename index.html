@@ -91,7 +91,28 @@
 <main id="genres"></main>
 
 <script>
-/* I generi e gli album si gestiscono in data/albums.json */
+/* I generi e gli album si gestiscono in data/albums.txt:
+   "# Genere" apre un genere, ogni riga sotto è un link.
+   Opzionale, per correggere i dati:  link | Artista | Titolo */
+function parseAlbums(text) {
+  const genres = [];
+  let cur = null;
+  text.split(/\r?\n/).forEach(raw => {
+    const line = raw.trim();
+    if (!line) return;
+    if (line[0] === "#") {
+      const name = line.replace(/^#+\s*/, "");
+      if (!name) return;
+      cur = genres.find(g => g.name.toLowerCase() === name.toLowerCase());
+      if (!cur) { cur = { name, albums: [] }; genres.push(cur); }
+      return;
+    }
+    if (!cur) return;
+    const [url, artist, title] = line.split("|").map(x => x.trim());
+    if (url) cur.albums.push({ url, artist, title });
+  });
+  return genres;
+}
 
 
 const CACHE_KEY = "album-cache-v1";
@@ -215,8 +236,9 @@ function addItem(id, label, count) {
 }
 addItem("all", "Tutti i generi", "");
 
-fetch("data/albums.json", { cache: "no-cache" })
-  .then(r => { if (!r.ok) throw new Error("albums.json: HTTP " + r.status); return r.json(); })
+fetch("data/albums.txt", { cache: "no-cache" })
+  .then(r => { if (!r.ok) throw new Error("albums.txt: HTTP " + r.status); return r.text(); })
+  .then(parseAlbums)
   .then(GENRES => {
 
 GENRES.filter(g => g.albums && g.albums.length).forEach(g => {
@@ -259,7 +281,7 @@ selectGenre(document.getElementById(location.hash.slice(1)) && location.hash.len
   })
   .catch(err => {
     console.error(err);
-    main.innerHTML = '<p style="padding:24px 6vw;color:var(--muted)">Impossibile caricare l’elenco degli album (data/albums.json).</p>';
+    main.innerHTML = '<p style="padding:24px 6vw;color:var(--muted)">Impossibile caricare l’elenco degli album (data/albums.txt).</p>';
   });
 </script>
 </body>
