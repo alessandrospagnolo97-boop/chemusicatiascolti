@@ -107,18 +107,24 @@ function parseAlbums(text) {
 }
 
 
-const CACHE_KEY = "album-cache-v2";
+const CACHE_KEY = "album-cache-v3";   // v3: scarta i dati artista/durata errati salvati dalle versioni precedenti
 let cache = {};
 try { cache = JSON.parse(localStorage.getItem(CACHE_KEY)) || {}; } catch (e) {}
 const saveCache = () => { try { localStorage.setItem(CACHE_KEY, JSON.stringify(cache)); } catch (e) {} };
 
-// Durata totale dell'album (somma delle tracce) da iTunes; 0 se non disponibile
-async function albumMs(id, country) {
-  try {
-    const r = await fetch("https://itunes.apple.com/lookup?entity=song&limit=200&id=" + id + "&country=" + country);
-    const res = (await r.json()).results || [];
-    return res.filter(x => x.wrapperType === "track").reduce((s, x) => s + (x.trackTimeMillis || 0), 0);
-  } catch (e) { return 0; }
+const norm = s => (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "");
+const sameTitle = (a, b) => { a = norm(a); b = norm(b); return !!a && !!b && (a.startsWith(b) || b.startsWith(a)); };
+
+// Nome e durata esatti da iTunes per ID. Per gli album somma le tracce, ma solo se sono arrivate tutte.
+async function itunesTiming(id, isAlbum, country) {
+  const r = await fetch("https://itunes.apple.com/lookup?id=" + id + "&country=" + country + (isAlbum ? "&entity=song&limit=200" : ""));
+  const res = (await r.json()).results || [];
+  const head = res[0];
+  if (!head) return null;
+  if (!isAlbum) return { name: head.trackName, ms: head.trackTimeMillis || 0 };
+  const tracks = res.filter(x => x.wrapperType === "track");
+  const ms = tracks.length && tracks.length === head.trackCount ? tracks.reduce((s, x) => s + (x.trackTimeMillis || 0), 0) : 0;
+  return { name: head.collectionName, ms };
 }
 function fmtDur(ms) {
   if (!ms) return "";
@@ -126,22 +132,47 @@ function fmtDur(ms) {
   return h ? h + " h " + String(min % 60).padStart(2, "0") + " min" : min + " min";
 }
 
-async function fromSpotify(url) {
+// song.link (Odesli) collega il link Spotify alla stessa uscita su Apple Music e dà l'artista ufficiale di Spotify.
+// Limite gratuito ~10 richieste/minuto: le chiamate vanno in coda, una ogni 6,5 s.
+let odesliChain = Promise.resolve();
+function odesli(url) {
+  const run = () => fetch("https://api.song.link/v1-alpha.1/links?userCountry=IT&url=" + encodeURIComponent(url))
+    .then(r => { if (!r.ok) throw new Error("song.link HTTP " + r.status); return r.json(); });
+  const p = odesliChain.then(run);
+  odesliChain = p.catch(() => {}).then(() => new Promise(r => setTimeout(r, 6500)));
+  return p;
+}
+async function enrichSpotify(clean, base) {
+  const d = await odesli(clean);
+  const sp = (d.entitiesByUniqueId || {})[d.entityUniqueId];
+  if (!sp || !sp.artistName) throw new Error("artista non trovato");
+  let duration = 0;
+  const am = d.linksByPlatform && d.linksByPlatform.appleMusic;
+  const m = am && am.entityUniqueId && am.entityUniqueId.match(/^ITUNES_(ALBUM|SONG)::(\d+)$/);
+  if (m) {
+    try {
+      const t = await itunesTiming(m[2], m[1] === "ALBUM", "it");
+      // uso la durata solo se Apple Music indica lo stesso titolo di Spotify
+      if (t && sameTitle(t.name, sp.title || base.title)) duration = t.ms;
+    } catch (e) {}
+  }
+  return { ...base, artist: sp.artistName, duration, partial: false };
+}
+
+// Spotify: titolo e copertina subito (oEmbed), artista e durata arrivano dopo da fonti verificate.
+// Se non si riesce a verificarli restano vuoti, mai indovinati.
+async function fromSpotify(url, onUpdate) {
   const m = url.match(/open\.spotify\.com\/(?:[a-z-]+\/)?(album|track)\/([A-Za-z0-9]+)/);
   if (!m) throw new Error("link Spotify non valido");
   const clean = "https://open.spotify.com/" + m[1] + "/" + m[2];
   const r = await fetch("https://open.spotify.com/oembed?url=" + encodeURIComponent(clean));
   if (!r.ok) throw new Error("Spotify non risponde");
   const d = await r.json();
-  let artist = "", duration = 0;
-  // L’oEmbed di Spotify non include l’artista: lo cerco su iTunes in base al titolo
-  try {
-    const s = await fetch("https://itunes.apple.com/search?entity=album&limit=5&term=" + encodeURIComponent(d.title));
-    const results = (await s.json()).results || [];
-    const hit = results.find(x => x.collectionName.toLowerCase().startsWith(d.title.toLowerCase())) || results[0];
-    if (hit) { artist = hit.artistName; duration = await albumMs(hit.collectionId, "it"); }
-  } catch (e) {}
-  return { title: d.title, artist, duration, cover: d.thumbnail_url, url: clean };
+  const base = { title: d.title, artist: "", duration: 0, cover: d.thumbnail_url, url: clean, partial: true };
+  enrichSpotify(clean, base)
+    .then(full => { cache[url] = full; saveCache(); if (onUpdate) onUpdate(full); })
+    .catch(e => console.warn("Artista/durata Spotify non verificati:", url, e));
+  return base;
 }
 
 async function fromApple(url) {
@@ -152,7 +183,11 @@ async function fromApple(url) {
   const r = await fetch("https://itunes.apple.com/lookup?id=" + id + "&country=" + country);
   const x = ((await r.json()).results || [])[0];
   if (!x) throw new Error("album non trovato");
-  const duration = x.wrapperType === "track" ? (x.trackTimeMillis || 0) : await albumMs(x.collectionId, country);
+  let duration = 0;
+  try {
+    const t = await itunesTiming(id, x.wrapperType !== "track", country);
+    if (t) duration = t.ms;
+  } catch (e) {}
   return {
     title: x.collectionName || x.trackName,
     artist: x.artistName,
@@ -162,10 +197,10 @@ async function fromApple(url) {
   };
 }
 
-async function resolve(url) {
+async function resolve(url, onUpdate) {
   if (cache[url]) return cache[url];
   let a;
-  if (/open\.spotify\.com/.test(url)) a = await fromSpotify(url);
+  if (/open\.spotify\.com/.test(url)) { a = await fromSpotify(url, onUpdate); if (a.partial) return a; }
   else if (/music\.apple\.com/.test(url)) a = await fromApple(url);
   else throw new Error("link non riconosciuto");
   cache[url] = a; saveCache();
@@ -448,9 +483,8 @@ GENRES.filter(g => g.albums && g.albums.length).forEach(g => {
     items.push(it);
     if (canHover) addMagnet(it);
     main.append(el);
-    resolve(o.url.trim())
-      .then(a => fill(el, { ...a, title: o.title || a.title, artist: o.artist || a.artist }))
-      .catch(e => fail(el, o.url, e));
+    const apply = a => fill(el, { ...a, title: o.title || a.title, artist: o.artist || a.artist });
+    resolve(o.url.trim(), apply).then(apply).catch(e => fail(el, o.url, e));
   });
 });
 
