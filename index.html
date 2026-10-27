@@ -55,6 +55,7 @@
     font:11px/1.35 ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; }
   .title { margin-top:10px; font-weight:600; }
   .artist { color:var(--muted); }
+  main:not(.single) .artist { display:none; }   /* in home solo il titolo; l'artista nelle pagine dei generi */
   .skeleton .cover { animation:pulse 1.2s ease-in-out infinite; }
   .error .cover { display:flex; align-items:center; justify-content:center; padding:12px;
     font-size:12px; color:var(--muted); text-align:center; }
@@ -133,21 +134,19 @@ async function artistFromEmbed(clean) {
   return name;
 }
 
-// Piano B: song.link (Odesli). Limite gratuito ~10 richieste/minuto, quindi in coda una ogni 6,5 s.
-let odesliChain = Promise.resolve();
-function odesli(url) {
-  const run = () => fetch("https://api.song.link/v1-alpha.1/links?userCountry=IT&url=" + encodeURIComponent(url))
-    .then(r => { if (!r.ok) throw new Error("song.link HTTP " + r.status); return r.json(); });
-  const p = odesliChain.then(run);
-  odesliChain = p.catch(() => {}).then(() => new Promise(r => setTimeout(r, 6500)));
-  return p;
+// Piano B: ricerca iTunes, accettata solo se il titolo coincide esattamente (senza "(Deluxe)" ecc.).
+// Se non c'è una corrispondenza esatta l'artista resta vuoto invece di indovinare.
+const norm = s => (s || "").replace(/\s*[\(\[].*$/, "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "");
+async function artistFromItunes(title) {
+  const r = await fetch("https://itunes.apple.com/search?entity=album&limit=10&country=it&term=" + encodeURIComponent(title));
+  const res = (await r.json()).results || [];
+  const hit = res.find(x => norm(x.collectionName) === norm(title));
+  if (!hit) throw new Error("nessuna corrispondenza esatta su iTunes");
+  return hit.artistName;
 }
-async function artistSpotify(clean) {
+async function artistSpotify(clean, title) {
   try { return await artistFromEmbed(clean); } catch (err) { console.warn("Spotify embed:", err); }
-  const d = await odesli(clean);
-  const sp = (d.entitiesByUniqueId || {})[d.entityUniqueId];
-  if (!sp || !sp.artistName) throw new Error("artista non trovato su song.link");
-  return sp.artistName;
+  return artistFromItunes(title);
 }
 
 // Spotify: titolo e copertina subito (oEmbed), l'artista arriva dopo. Se non è verificabile resta vuoto.
@@ -159,7 +158,7 @@ async function fromSpotify(url, onUpdate) {
   if (!r.ok) throw new Error("Spotify non risponde");
   const d = await r.json();
   const base = { title: d.title, artist: "", cover: d.thumbnail_url, url: clean, partial: true };
-  artistSpotify(clean)
+  artistSpotify(clean, d.title)
     .then(name => { const full = { ...base, artist: name, partial: false }; cache[url] = full; saveCache(); if (onUpdate) onUpdate(full); })
     .catch(e => console.warn("Artista Spotify non verificato:", url, e));
   return base;
@@ -224,7 +223,7 @@ main.append(gtitle);
 const nav = document.getElementById("nav");
 
 /* ---------- Infinite canvas ---------- */
-const TXT = 44;                     // altezza riservata al testo sotto la copertina
+const TXT = 30;                     // altezza riservata al testo sotto la copertina
 const items = [];                   // { el, genre, bx, by, sz }
 let active = [], W = 1, H = 1, CW = 1, CH = 1, lastSig = "";
 const cam = { x: 0, y: 0 };
